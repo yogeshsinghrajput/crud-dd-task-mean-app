@@ -58,7 +58,7 @@ jobs:
             docker pull ${{ env.DOCKER_IMAGE_FRONT }}:latest
             
             # 2. Setup directory
-            cd ~/mean-app || mkdir -p ~/mean-app
+            mkdir -p ~/mean-app && cd ~/mean-app
             
             # 3. Create Docker Compose file
             cat > docker-compose.yml <<'EOF'
