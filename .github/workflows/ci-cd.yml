@@ -45,9 +45,6 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Deploy to VM via SSH
         uses: appleboy/ssh-action@v0.1.8
         with:
@@ -56,34 +53,45 @@ jobs:
           key: ${{ secrets.VM_SSH_KEY }}
           port: ${{ secrets.VM_SSH_PORT }}
           script: |
+            # 1. Pull latest images
             docker pull ${{ env.DOCKER_IMAGE_BACK }}:latest
             docker pull ${{ env.DOCKER_IMAGE_FRONT }}:latest
+            
+            # 2. Setup directory
             cd ~/mean-app || mkdir -p ~/mean-app
+            
+            # 3. Create Docker Compose file
             cat > docker-compose.yml <<'EOF'
-version: '3.8'
-services:
-  backend:
-    image: ${{ env.DOCKER_IMAGE_BACK }}:latest
-    restart: unless-stopped
-    environment:
-      - MONGO_URI=mongodb://mongo:27017/mean_db
-    depends_on:
-      - mongo
+            version: '3.8'
+            services:
+              backend:
+                image: ${{ env.DOCKER_IMAGE_BACK }}:latest
+                restart: always
+                environment:
+                  - MONGO_URI=mongodb://mongo:27017/mean_db
+                depends_on:
+                  - mongo
 
-  frontend:
-    image: ${{ env.DOCKER_IMAGE_FRONT }}:latest
-    restart: unless-stopped
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
+              frontend:
+                image: ${{ env.DOCKER_IMAGE_FRONT }}:latest
+                restart: always
+                ports:
+                  - "8080:80"
+                depends_on:
+                  - backend
 
-  mongo:
-    image: mongo:6.0
-    restart: unless-stopped
-    volumes:
-      - mongo-data:/data/db
-volumes:
-  mongo-data:
-EOF
+              mongo:
+                image: mongo:6.0
+                restart: always
+                volumes:
+                  - mongo-data:/data/db
+            volumes:
+              mongo-data:
+            EOF
+            
+            # 4. Restart containers
+            docker-compose down
             docker-compose -f docker-compose.yml up -d
+            
+            # 5. Clean up unused images to save space
+            docker system prune -f
