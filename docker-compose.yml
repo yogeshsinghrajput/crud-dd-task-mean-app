@@ -1,0 +1,33 @@
+version: '3.8'
+services:
+  backend:
+    build: ./backend
+    container_name: mean_backend
+    restart: unless-stopped
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/mean_db
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongo
+
+  frontend:
+    build: ./frontend
+    container_name: mean_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  mongo:
+    image: mongo:6.0
+    container_name: mean_mongo
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+
+volumes:
+  mongo-data:
